@@ -887,13 +887,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy_test_wasm"
-version = "0.1.0"
-dependencies = [
- "bevy",
-]
-
-[[package]]
 name = "bevy_text"
 version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1749,6 +1742,13 @@ dependencies = [
  "futures-io",
  "parking",
  "pin-project-lite",
+]
+
+[[package]]
+name = "game-jam-skeleton"
+version = "0.1.0"
+dependencies = [
+ "bevy",
 ]
 
 [[package]]
