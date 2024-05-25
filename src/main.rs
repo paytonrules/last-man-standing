@@ -1,39 +1,38 @@
-use bevy::{prelude::*, sprite::MaterialMesh2dBundle, sprite::Mesh2dHandle};
+use bevy::prelude::*;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
+        .add_systems(Update, bevy::window::close_on_esc)
         .add_systems(Startup, setup)
         .run();
 }
-const X_EXTENT: f32 = 600.;
 
 fn setup(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    asset_server: Res<AssetServer>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
     commands.spawn(Camera2dBundle::default());
 
-    let shapes = [
-        Mesh2dHandle(meshes.add(Circle { radius: 50.0 })),
-        Mesh2dHandle(meshes.add(Ellipse::new(25.0, 50.0))),
-    ];
+    let texture = asset_server.load("textures/tilemap.png");
 
-    let num_shapes = shapes.len();
+    let layout = TextureAtlasLayout::from_grid(
+        Vec2::new(16.0, 16.0),
+        12,
+        11,
+        Some(Vec2::new(1.0, 1.0)),
+        None,
+    );
 
-    for (i, shape) in shapes.into_iter().enumerate() {
-        let color = Color::hsl(360. * i as f32 / num_shapes as f32, 0.95, 0.7);
+    let texture_atlas_layout = texture_atlas_layouts.add(layout);
 
-        commands.spawn(MaterialMesh2dBundle {
-            mesh: shape,
-            material: materials.add(color),
-            transform: Transform::from_xyz(
-                -X_EXTENT / 2. + i as f32 / (num_shapes - 1) as f32 * X_EXTENT,
-                0.0,
-                0.0,
-            ),
-            ..default()
-        });
-    }
+    commands.spawn(SpriteSheetBundle {
+        texture,
+        atlas: TextureAtlas {
+            layout: texture_atlas_layout,
+            index: 84,
+        },
+        ..default()
+    });
 }
