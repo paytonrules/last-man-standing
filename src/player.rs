@@ -1,5 +1,10 @@
 use bevy::prelude::*;
 
+const PLAYER_SPEED: f32 = 3.0;
+
+#[derive(Component)]
+pub struct PlayerTag;
+
 #[derive(Resource, Default)]
 pub struct Player {
     direction: Vec2, // Not sure these are the structs should use (and should this store the
@@ -9,11 +14,11 @@ pub struct Player {
 // the player sprite sheet
 pub fn move_player(
     player: ResMut<Player>,
-    mut player_sprite: Query<(&mut Transform, &Handle<Image>)>,
+    mut player_sprite: Query<(&mut Transform, &Handle<Image>), With<PlayerTag>>,
 ) {
     let (mut transform, _image) = player_sprite.single_mut();
-    transform.translation.x += player.direction.x * 3.0;
-    transform.translation.y += player.direction.y * 3.0;
+    transform.translation.x += player.direction.x * PLAYER_SPEED;
+    transform.translation.y += player.direction.y * PLAYER_SPEED;
 }
 
 pub fn update_player_direction(keys: Res<ButtonInput<KeyCode>>, mut player: ResMut<Player>) {
