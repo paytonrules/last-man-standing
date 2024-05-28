@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use rand::{random, thread_rng, Rng};
+use rand::{thread_rng, Rng};
 
 mod player;
 
@@ -19,7 +19,7 @@ fn main() {
             Update,
             (bevy::window::close_on_esc, player::update_player_direction),
         )
-        .add_systems(FixedUpdate, player::move_player)
+        .add_systems(FixedUpdate, (player::move_player, check_collisions))
         .run();
 }
 
@@ -56,6 +56,32 @@ fn setup(
 
     spawn_player(sprite_template.clone(), &mut commands);
     spawn_enemies(sprite_template.clone(), &player_transform, &mut commands);
+}
+
+// This is doing a bunch of calculations every frame. You could make this on an event and just use
+// components you update on change
+fn check_collisions(
+    commands: Commands,
+    mut player: Query<(&mut Transform, &Handle<Image>), With<player::PlayerTag>>,
+    mut enemies: Query<(&mut Transform, &Handle<Image>), Without<player::PlayerTag>>,
+    assets: Res<Assets<Image>>,
+) {
+    let (transform, player_handle) = player.single();
+    // This gives the size of the whole image - not what you want
+    // Instead use size * scale value
+    // location - size * scale / 2
+    // There is at least a rect though
+    let scaled = 16.0 * transform.scale.truncate();
+    let player_rect = Rect::from_center_size(transform.translation.truncate(), scaled);
+
+    for (enemy_transform, _image) in enemies.iter() {
+        let scaled = 16.0 * enemy_transform.scale.truncate();
+        let enemy_rect = Rect::from_center_size(enemy_transform.translation.truncate(), scaled);
+
+        if !player_rect.intersect(enemy_rect).is_empty() {
+            println!("Collision");
+        }
+    }
 }
 
 fn spawn_player(mut bundle: SpriteSheetBundle, commands: &mut Commands) {
