@@ -62,10 +62,13 @@ fn setup(
 // components you update on change
 fn check_collisions(
     mut commands: Commands,
-    mut player: Query<(&mut Transform, &Handle<Image>), With<player::PlayerTag>>,
+    mut player: Query<(Entity, &mut Transform, &Handle<Image>), With<player::PlayerTag>>,
     enemies: Query<(Entity, &Transform, &Handle<Image>), Without<player::PlayerTag>>,
 ) {
-    let (mut transform, _player_handle) = player.single_mut();
+    let Ok((player_entity, mut transform, _player_handle)) = player.get_single_mut() else {
+        return;
+    };
+
     let scaled = 16.0 * transform.scale.truncate();
     let player_rect = Rect::from_center_size(transform.translation.truncate(), scaled);
 
@@ -77,6 +80,8 @@ fn check_collisions(
             if transform.scale.length_squared() > enemy_transform.scale.length_squared() {
                 commands.entity(entity).despawn();
                 transform.scale += 0.2;
+            } else {
+                commands.entity(player_entity).despawn();
             }
         }
     }

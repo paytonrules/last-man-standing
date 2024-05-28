@@ -16,7 +16,9 @@ pub fn move_player(
     player: ResMut<Player>,
     mut player_sprite: Query<(&mut Transform, &Handle<Image>), With<PlayerTag>>,
 ) {
-    let (mut transform, _image) = player_sprite.single_mut();
+    let Ok((mut transform, _image)) = player_sprite.get_single_mut() else {
+        return;
+    };
     transform.translation.x += player.direction.x * PLAYER_SPEED;
     transform.translation.y += player.direction.y * PLAYER_SPEED;
 }
