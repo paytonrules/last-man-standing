@@ -67,11 +67,6 @@ fn spawn_enemies(bundle: SpriteSheetBundle, player_transform: &Transform, comman
     let mut rng = thread_rng();
     for _ in 0..10 {
         let mut bundle = bundle.clone();
-        let length = Vec3 {
-            x: rng.gen_range(MIN_DISTANCE_TO_ENEMY..MAX_DISTANCE_TO_ENEMY),
-            y: 0.0,
-            z: 0.0,
-        };
         let mut direction = None;
         while direction.is_none() {
             direction = Vec3 {
@@ -86,8 +81,8 @@ fn spawn_enemies(bundle: SpriteSheetBundle, player_transform: &Transform, comman
 
         bundle.atlas.index = ENEMY_INDICES[rng.gen_range(0..ENEMY_INDICES.len())];
         bundle.transform = player_transform
-            .with_scale(Vec3::splat(2.0))
-            .with_translation(direction);
+            .with_scale(player_transform.scale * rng.gen_range(0.8..1.2))
+            .with_translation(player_transform.translation + direction);
 
         commands.spawn((EnemyTag, bundle));
     }
