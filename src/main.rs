@@ -63,33 +63,32 @@ fn spawn_player(mut bundle: SpriteSheetBundle, commands: &mut Commands) {
     commands.spawn((player::PlayerTag, bundle));
 }
 
-fn spawn_enemies(
-    mut bundle: SpriteSheetBundle,
-    player_transform: &Transform,
-    commands: &mut Commands,
-) {
+fn spawn_enemies(bundle: SpriteSheetBundle, player_transform: &Transform, commands: &mut Commands) {
     let mut rng = thread_rng();
-    let length = Vec3 {
-        x: rng.gen_range(MIN_DISTANCE_TO_ENEMY..MAX_DISTANCE_TO_ENEMY),
-        y: 0.0,
-        z: 0.0,
-    };
-    let mut direction = None;
-    while direction.is_none() {
-        direction = Vec3 {
-            x: rng.gen_range(-1.0..1.0),
-            y: rng.gen_range(-1.0..1.0),
+    for _ in 0..10 {
+        let mut bundle = bundle.clone();
+        let length = Vec3 {
+            x: rng.gen_range(MIN_DISTANCE_TO_ENEMY..MAX_DISTANCE_TO_ENEMY),
+            y: 0.0,
             z: 0.0,
+        };
+        let mut direction = None;
+        while direction.is_none() {
+            direction = Vec3 {
+                x: rng.gen_range(-1.0..1.0),
+                y: rng.gen_range(-1.0..1.0),
+                z: 0.0,
+            }
+            .try_normalize();
         }
-        .try_normalize();
+        let direction =
+            direction.unwrap() * rng.gen_range(MIN_DISTANCE_TO_ENEMY..MAX_DISTANCE_TO_ENEMY);
+
+        bundle.atlas.index = ENEMY_INDICES[rng.gen_range(0..ENEMY_INDICES.len())];
+        bundle.transform = player_transform
+            .with_scale(Vec3::splat(2.0))
+            .with_translation(direction);
+
+        commands.spawn((EnemyTag, bundle));
     }
-    let direction =
-        direction.unwrap() * rng.gen_range(MIN_DISTANCE_TO_ENEMY..MAX_DISTANCE_TO_ENEMY);
-
-    bundle.atlas.index = 85;
-    bundle.transform = player_transform
-        .with_scale(Vec3::splat(2.0))
-        .with_translation(direction);
-
-    commands.spawn((EnemyTag, bundle));
 }
