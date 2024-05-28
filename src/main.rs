@@ -1,45 +1,17 @@
 use bevy::prelude::*;
 
-#[derive(Resource)]
-struct Player {
-    direction: Vec2, // Not sure these are the structs should use (and should this store the
-}
+mod player;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
         .add_systems(Startup, setup)
-        .add_systems(Update, (bevy::window::close_on_esc, update_keys))
-        .add_systems(FixedUpdate, move_player)
+        .add_systems(
+            Update,
+            (bevy::window::close_on_esc, player::update_player_direction),
+        )
+        .add_systems(FixedUpdate, player::move_player)
         .run();
-}
-
-fn update_keys(keys: Res<ButtonInput<KeyCode>>, mut player: ResMut<Player>) {
-    player.direction.x = 0.0;
-    player.direction.y = 0.0;
-    if keys.pressed(KeyCode::KeyW) {
-        player.direction.y += 1.0;
-    }
-
-    if keys.pressed(KeyCode::KeyS) {
-        player.direction.y += -1.0;
-    }
-
-    if keys.pressed(KeyCode::KeyA) {
-        player.direction.x += -1.0;
-    }
-
-    if keys.pressed(KeyCode::KeyD) {
-        player.direction.x += 1.0;
-    }
-}
-
-// TODO: Player Sprite query is going to get every transform eventually. You should probably tag
-// the player sprite sheet
-fn move_player(player: ResMut<Player>, mut player_sprite: Query<(&mut Transform, &Handle<Image>)>) {
-    let (mut transform, _image) = player_sprite.single_mut();
-    transform.translation.x += player.direction.x * 3.0;
-    transform.translation.y += player.direction.y * 3.0;
 }
 
 fn setup(
@@ -48,9 +20,7 @@ fn setup(
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
     commands.spawn(Camera2dBundle::default());
-    commands.insert_resource(Player {
-        direction: Vec2::default(),
-    });
+    commands.insert_resource(player::Player::default());
 
     let texture = asset_server.load("textures/tilemap.png");
 
