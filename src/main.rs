@@ -61,25 +61,23 @@ fn setup(
 // This is doing a bunch of calculations every frame. You could make this on an event and just use
 // components you update on change
 fn check_collisions(
-    commands: Commands,
+    mut commands: Commands,
     mut player: Query<(&mut Transform, &Handle<Image>), With<player::PlayerTag>>,
-    mut enemies: Query<(&mut Transform, &Handle<Image>), Without<player::PlayerTag>>,
-    assets: Res<Assets<Image>>,
+    enemies: Query<(Entity, &Transform, &Handle<Image>), Without<player::PlayerTag>>,
 ) {
-    let (transform, player_handle) = player.single();
-    // This gives the size of the whole image - not what you want
-    // Instead use size * scale value
-    // location - size * scale / 2
-    // There is at least a rect though
+    let (mut transform, _player_handle) = player.single_mut();
     let scaled = 16.0 * transform.scale.truncate();
     let player_rect = Rect::from_center_size(transform.translation.truncate(), scaled);
 
-    for (enemy_transform, _image) in enemies.iter() {
+    for (entity, enemy_transform, _image) in enemies.iter() {
         let scaled = 16.0 * enemy_transform.scale.truncate();
         let enemy_rect = Rect::from_center_size(enemy_transform.translation.truncate(), scaled);
 
         if !player_rect.intersect(enemy_rect).is_empty() {
-            println!("Collision");
+            if transform.scale.length_squared() > enemy_transform.scale.length_squared() {
+                commands.entity(entity).despawn();
+                transform.scale += 0.2;
+            }
         }
     }
 }
