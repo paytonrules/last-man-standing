@@ -14,17 +14,30 @@ struct Enemy {
     destination: Vec2,
 }
 
+#[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
+enum GameStates {
+    #[default]
+    Running,
+    Dead,
+}
+
 fn main() {
     App::new()
+        .init_state::<GameStates>()
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
         .add_systems(Startup, setup)
         .add_systems(
             FixedUpdate,
-            (player::move_player, move_enemies, check_collisions),
+            (player::move_player, move_enemies, check_collisions)
+                .run_if(in_state(GameStates::Running)),
         )
         .add_systems(
             Update,
-            (player::update_player_direction, bevy::window::close_on_esc),
+            (
+                bevy::window::close_on_esc,
+                (player::update_player_direction).run_if(in_state(GameStates::Running)),
+                (player::restart_when_ready).run_if(in_state(GameStates::Dead)),
+            ),
         )
         .run();
 }
@@ -76,6 +89,7 @@ fn check_collisions(
     mut commands: Commands,
     mut player: Query<(Entity, &player::Player, &mut Transform)>,
     enemies: Query<(Entity, &Transform, &Enemy), Without<player::Player>>,
+    mut next_state: ResMut<NextState<GameStates>>,
 ) {
     let Ok((player_entity, _player, mut transform)) = player.get_single_mut() else {
         return;
@@ -94,6 +108,7 @@ fn check_collisions(
                 transform.scale += 0.2;
             } else {
                 commands.entity(player_entity).despawn();
+                next_state.set(GameStates::Dead);
             }
         }
     }

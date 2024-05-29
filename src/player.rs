@@ -43,3 +43,5 @@ pub fn update_player_direction(
         player.direction.x += 1.0;
     }
 }
+
+pub fn restart_when_ready() {}
