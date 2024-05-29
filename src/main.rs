@@ -7,9 +7,12 @@ const PLAYER_INDEX: usize = 84;
 const ENEMY_INDICES: [usize; 14] = [85, 86, 87, 88, 96, 97, 98, 99, 100, 108, 109, 110, 111, 112];
 const MIN_DISTANCE_TO_ENEMY: f32 = 140.0;
 const MAX_DISTANCE_TO_ENEMY: f32 = 550.0;
+const ENEMY_SPEED: f32 = 2.9;
 
-#[derive(Component)]
-struct EnemyTag;
+#[derive(Component, Default)]
+struct Enemy {
+    destination: Vec2,
+}
 
 fn main() {
     App::new()
@@ -19,7 +22,10 @@ fn main() {
             Update,
             (bevy::window::close_on_esc, player::update_player_direction),
         )
-        .add_systems(FixedUpdate, (player::move_player, check_collisions))
+        .add_systems(
+            FixedUpdate,
+            (player::move_player, move_enemies, check_collisions),
+        )
         .run();
 }
 
@@ -113,6 +119,39 @@ fn spawn_enemies(bundle: SpriteSheetBundle, player_transform: &Transform, comman
             .with_scale(player_transform.scale * rng.gen_range(0.8..1.2))
             .with_translation(player_transform.translation + direction);
 
-        commands.spawn((EnemyTag, bundle));
+        commands.spawn((
+            Enemy {
+                destination: random_destination(),
+            },
+            bundle,
+        ));
+    }
+}
+
+fn move_enemies(mut enemies: Query<(&mut Enemy, &mut Transform)>) {
+    enemies.iter_mut().for_each(|(mut enemy, mut transform)| {
+        // Give it a fudge factor
+        if transform
+            .translation
+            .xy()
+            .distance_squared(enemy.destination)
+            < 4.0
+        {
+            enemy.destination = random_destination();
+        } else {
+            let direction =
+                (enemy.destination - transform.translation.xy()).normalize() * ENEMY_SPEED;
+            transform.translation.x += direction.x;
+            transform.translation.y += direction.y;
+        }
+    });
+}
+
+fn random_destination() -> Vec2 {
+    let mut rng = thread_rng();
+    Vec2 {
+        x: rng.gen_range(-512.0..=512.0),
+        y: rng.gen_range(-400.0..=400.0), // I have no idea of the coordinate system, what is the max or
+                                          // top
     }
 }
