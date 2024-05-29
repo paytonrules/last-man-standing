@@ -19,12 +19,12 @@ fn main() {
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
         .add_systems(Startup, setup)
         .add_systems(
-            Update,
-            (bevy::window::close_on_esc, player::update_player_direction),
-        )
-        .add_systems(
             FixedUpdate,
             (player::move_player, move_enemies, check_collisions),
+        )
+        .add_systems(
+            Update,
+            (player::update_player_direction, bevy::window::close_on_esc),
         )
         .run();
 }
@@ -36,7 +36,6 @@ fn setup(
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
     commands.spawn(Camera2dBundle::default());
-    commands.insert_resource(player::Player::default());
 
     let texture: Handle<Image> = asset_server.load("textures/tilemap.png");
 
@@ -75,10 +74,10 @@ fn setup(
 // components you update on change
 fn check_collisions(
     mut commands: Commands,
-    mut player: Query<(Entity, &mut Transform, &Handle<Image>), With<player::PlayerTag>>,
-    enemies: Query<(Entity, &Transform, &Handle<Image>), Without<player::PlayerTag>>,
+    mut player: Query<(Entity, &player::Player, &mut Transform, &Handle<Image>)>,
+    enemies: Query<(Entity, &Transform, &Handle<Image>), Without<player::Player>>,
 ) {
-    let Ok((player_entity, mut transform, _player_handle)) = player.get_single_mut() else {
+    let Ok((player_entity, _player, mut transform, _image)) = player.get_single_mut() else {
         return;
     };
 
@@ -102,7 +101,7 @@ fn check_collisions(
 
 fn spawn_player(mut bundle: SpriteSheetBundle, commands: &mut Commands) {
     bundle.atlas.index = PLAYER_INDEX;
-    commands.spawn((player::PlayerTag, bundle));
+    commands.spawn((player::Player::default(), bundle));
 }
 
 fn spawn_enemies(
