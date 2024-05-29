@@ -12,7 +12,6 @@ pub struct Player {
 // the player sprite sheet
 pub fn move_player(mut player_query: Query<(&Player, &mut Transform)>) {
     let Ok((player, mut transform)) = player_query.get_single_mut() else {
-        println!("Player is dead");
         return;
     };
     transform.translation.x += player.direction.x * PLAYER_SPEED;
@@ -24,7 +23,6 @@ pub fn update_player_direction(
     mut player_query: Query<&mut Player>,
 ) {
     let Ok(mut player) = player_query.get_single_mut() else {
-        println!("Player is dead 2");
         return;
     };
     player.direction.x = 0.0;

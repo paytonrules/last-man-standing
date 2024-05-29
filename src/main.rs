@@ -74,25 +74,27 @@ fn setup(
 // components you update on change
 fn check_collisions(
     mut commands: Commands,
-    mut player: Query<(Entity, &player::Player, &mut Transform, &Handle<Image>)>,
-    enemies: Query<(Entity, &Transform, &Handle<Image>), Without<player::Player>>,
+    mut player: Query<(Entity, &player::Player, &mut Transform)>,
+    enemies: Query<(Entity, &Transform, &Enemy), Without<player::Player>>,
 ) {
-    let Ok((player_entity, _player, mut transform, _image)) = player.get_single_mut() else {
+    let Ok((player_entity, _player, mut transform)) = player.get_single_mut() else {
         return;
     };
 
     let scaled = 16.0 * transform.scale.truncate();
     let player_rect = Rect::from_center_size(transform.translation.truncate(), scaled);
 
-    for (entity, enemy_transform, _image) in enemies.iter() {
+    for (entity, enemy_transform, _enemy_component) in enemies.iter() {
         let scaled = 16.0 * enemy_transform.scale.truncate();
         let enemy_rect = Rect::from_center_size(enemy_transform.translation.truncate(), scaled);
 
         if !player_rect.intersect(enemy_rect).is_empty() {
             if transform.scale.length_squared() > enemy_transform.scale.length_squared() {
+                println!("Despawn!");
                 commands.entity(entity).despawn();
                 transform.scale += 0.2;
             } else {
+                println!("Despawn player!");
                 commands.entity(player_entity).despawn();
             }
         }
