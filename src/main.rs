@@ -32,6 +32,7 @@ fn main() {
 fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
+    window_query: Query<&Window>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
     commands.spawn(Camera2dBundle::default());
@@ -61,7 +62,13 @@ fn setup(
     };
 
     spawn_player(sprite_template.clone(), &mut commands);
-    spawn_enemies(sprite_template.clone(), &player_transform, &mut commands);
+    let window = window_query.single();
+    spawn_enemies(
+        sprite_template.clone(),
+        &player_transform,
+        &window,
+        &mut commands,
+    );
 }
 
 // This is doing a bunch of calculations every frame. You could make this on an event and just use
@@ -98,7 +105,12 @@ fn spawn_player(mut bundle: SpriteSheetBundle, commands: &mut Commands) {
     commands.spawn((player::PlayerTag, bundle));
 }
 
-fn spawn_enemies(bundle: SpriteSheetBundle, player_transform: &Transform, commands: &mut Commands) {
+fn spawn_enemies(
+    bundle: SpriteSheetBundle,
+    player_transform: &Transform,
+    window: &Window,
+    commands: &mut Commands,
+) {
     let mut rng = thread_rng();
     for _ in 0..10 {
         let mut bundle = bundle.clone();
@@ -121,14 +133,15 @@ fn spawn_enemies(bundle: SpriteSheetBundle, player_transform: &Transform, comman
 
         commands.spawn((
             Enemy {
-                destination: random_destination(),
+                destination: random_destination(window),
             },
             bundle,
         ));
     }
 }
 
-fn move_enemies(mut enemies: Query<(&mut Enemy, &mut Transform)>) {
+fn move_enemies(mut enemies: Query<(&mut Enemy, &mut Transform)>, window_query: Query<&Window>) {
+    let window = window_query.single();
     enemies.iter_mut().for_each(|(mut enemy, mut transform)| {
         // Give it a fudge factor
         if transform
@@ -137,7 +150,7 @@ fn move_enemies(mut enemies: Query<(&mut Enemy, &mut Transform)>) {
             .distance_squared(enemy.destination)
             < 4.0
         {
-            enemy.destination = random_destination();
+            enemy.destination = random_destination(window);
         } else {
             let direction =
                 (enemy.destination - transform.translation.xy()).normalize() * ENEMY_SPEED;
@@ -147,11 +160,12 @@ fn move_enemies(mut enemies: Query<(&mut Enemy, &mut Transform)>) {
     });
 }
 
-fn random_destination() -> Vec2 {
+fn random_destination(window: &Window) -> Vec2 {
     let mut rng = thread_rng();
+    let half_width = window.width() / 2.0;
+    let half_height = window.height() / 2.0;
     Vec2 {
-        x: rng.gen_range(-512.0..=512.0),
-        y: rng.gen_range(-400.0..=400.0), // I have no idea of the coordinate system, what is the max or
-                                          // top
+        x: rng.gen_range(-half_width..half_width),
+        y: rng.gen_range(-half_height..half_height),
     }
 }
