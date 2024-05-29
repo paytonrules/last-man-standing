@@ -90,11 +90,9 @@ fn check_collisions(
 
         if !player_rect.intersect(enemy_rect).is_empty() {
             if transform.scale.length_squared() > enemy_transform.scale.length_squared() {
-                println!("Despawn!");
                 commands.entity(entity).despawn();
                 transform.scale += 0.2;
             } else {
-                println!("Despawn player!");
                 commands.entity(player_entity).despawn();
             }
         }
