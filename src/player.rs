@@ -7,7 +7,7 @@ pub struct Player {
     direction: Vec2,
 }
 
-#[derive(Event)]
+#[derive(Event, Default)]
 pub struct Spawn;
 
 #[derive(Event)]

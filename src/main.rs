@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use rand::{thread_rng, Rng};
+use std::time::Duration;
 
 mod player;
 
@@ -25,8 +26,21 @@ enum GameStates {
 #[derive(Resource)]
 struct SpriteSheetTemplate(SpriteSheetBundle);
 
-#[derive(Event)]
+#[derive(Event, Default)]
 struct SpawnEnemies;
+
+#[derive(Component)]
+struct SpawnEnemiesTimer {
+    timer: Timer,
+}
+
+impl Default for SpawnEnemiesTimer {
+    fn default() -> Self {
+        SpawnEnemiesTimer {
+            timer: Timer::new(Duration::from_secs(1), TimerMode::Once),
+        }
+    }
+}
 
 fn main() {
     App::new()
@@ -47,6 +61,7 @@ fn main() {
                 bevy::window::close_on_esc,
                 spawn_player,
                 spawn_enemies,
+                spawn_enemies_timer,
                 (player::update_player_direction).run_if(in_state(GameStates::Running)),
                 (player::listen_for_restart_button, restart_game)
                     .run_if(in_state(GameStates::Dead)),
@@ -85,7 +100,8 @@ fn setup(
     };
     commands.insert_resource(SpriteSheetTemplate(sprite_template.clone()));
 
-    spawn_characters(&mut spawn_player_event, &mut spawn_enemies_event);
+    spawn_player_event.send_default();
+    spawn_enemies_event.send_default();
 }
 
 // This is doing a bunch of calculations every frame. You could make this on an event and just use
@@ -134,42 +150,54 @@ fn spawn_player(
     }
 }
 
-fn spawn_enemies(
+fn spawn_enemies(mut restart_event: EventReader<SpawnEnemies>, mut commands: Commands) {
+    for _event in restart_event.read() {
+        commands.spawn(SpawnEnemiesTimer::default());
+    }
+}
+
+fn spawn_enemies_timer(
     template: Res<SpriteSheetTemplate>,
     window_query: Query<&Window>,
-    mut restart_event: EventReader<SpawnEnemies>,
+    time: Res<Time>,
+    mut spawn_enemies_timer: Query<(Entity, &mut SpawnEnemiesTimer)>,
     mut commands: Commands,
 ) {
     let window = window_query.single();
 
-    for _event in restart_event.read() {
-        let bundle = &template.0;
-        let mut rng = thread_rng();
-        for _ in 0..10 {
-            let mut bundle = bundle.clone();
-            let mut direction = None;
-            while direction.is_none() {
-                direction = Vec3 {
-                    x: rng.gen_range(-1.0..1.0),
-                    y: rng.gen_range(-1.0..1.0),
-                    z: 0.0,
+    for (entity, mut spawner) in spawn_enemies_timer.iter_mut() {
+        spawner.timer.tick(time.delta());
+
+        if spawner.timer.finished() {
+            let bundle = &template.0;
+            let mut rng = thread_rng();
+            for _ in 0..10 {
+                let mut bundle = bundle.clone();
+                let mut direction = None;
+                while direction.is_none() {
+                    direction = Vec3 {
+                        x: rng.gen_range(-1.0..1.0),
+                        y: rng.gen_range(-1.0..1.0),
+                        z: 0.0,
+                    }
+                    .try_normalize();
                 }
-                .try_normalize();
+                let direction = direction.unwrap()
+                    * rng.gen_range(MIN_DISTANCE_TO_ENEMY..MAX_DISTANCE_TO_ENEMY);
+
+                bundle.atlas.index = ENEMY_INDICES[rng.gen_range(0..ENEMY_INDICES.len())];
+                bundle.transform = PLAYER_STARTING_TRANSFORM
+                    .with_scale(PLAYER_STARTING_TRANSFORM.scale * rng.gen_range(0.8..1.2))
+                    .with_translation(PLAYER_STARTING_TRANSFORM.translation + direction);
+
+                commands.spawn((
+                    Enemy {
+                        destination: random_destination(window),
+                    },
+                    bundle,
+                ));
             }
-            let direction =
-                direction.unwrap() * rng.gen_range(MIN_DISTANCE_TO_ENEMY..MAX_DISTANCE_TO_ENEMY);
-
-            bundle.atlas.index = ENEMY_INDICES[rng.gen_range(0..ENEMY_INDICES.len())];
-            bundle.transform = PLAYER_STARTING_TRANSFORM
-                .with_scale(PLAYER_STARTING_TRANSFORM.scale * rng.gen_range(0.8..1.2))
-                .with_translation(PLAYER_STARTING_TRANSFORM.translation + direction);
-
-            commands.spawn((
-                Enemy {
-                    destination: random_destination(window),
-                },
-                bundle,
-            ));
+            commands.entity(entity).despawn();
         }
     }
 }
@@ -187,20 +215,11 @@ fn restart_game(
             commands.entity(entity).despawn();
         });
 
-        // Extract method here
-        spawn_characters(&mut spawn_player_event, &mut spawn_enemies_event);
+        spawn_player_event.send_default();
+        spawn_enemies_event.send_default();
 
         next_state.set(GameStates::Running);
     }
-}
-
-// TODO: See if you can put these on timers
-fn spawn_characters(
-    spawn_player_event: &mut EventWriter<player::Spawn>,
-    spawn_enemies_event: &mut EventWriter<SpawnEnemies>,
-) {
-    spawn_player_event.send(player::Spawn);
-    spawn_enemies_event.send(SpawnEnemies);
 }
 
 fn move_enemies(mut enemies: Query<(&mut Enemy, &mut Transform)>, window_query: Query<&Window>) {
