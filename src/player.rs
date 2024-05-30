@@ -7,6 +7,12 @@ pub struct Player {
     direction: Vec2,
 }
 
+#[derive(Event)]
+pub struct Spawn;
+
+#[derive(Event)]
+pub struct Restart;
+
 // TODO Should you just make these loops?
 // TODO: Player Sprite query is going to get every transform eventually. You should probably tag
 // the player sprite sheet
@@ -44,4 +50,11 @@ pub fn update_player_direction(
     }
 }
 
-pub fn restart_when_ready() {}
+pub fn listen_for_restart_button(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut restart: EventWriter<Restart>,
+) {
+    if keys.pressed(KeyCode::KeyR) {
+        restart.send(Restart);
+    }
+}
