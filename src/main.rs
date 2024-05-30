@@ -1,20 +1,14 @@
 use bevy::prelude::*;
 use rand::{thread_rng, Rng};
-use std::time::Duration;
 
+mod enemies;
 mod player;
 
 const PLAYER_INDEX: usize = 84;
 const ENEMY_INDICES: [usize; 14] = [85, 86, 87, 88, 96, 97, 98, 99, 100, 108, 109, 110, 111, 112];
 const MIN_DISTANCE_TO_ENEMY: f32 = 140.0;
 const MAX_DISTANCE_TO_ENEMY: f32 = 550.0;
-const ENEMY_SPEED: f32 = 2.9;
 const PLAYER_STARTING_TRANSFORM: Transform = Transform::from_scale(Vec3::splat(3.0));
-
-#[derive(Component, Default)]
-struct Enemy {
-    destination: Vec2,
-}
 
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
 enum GameStates {
@@ -29,19 +23,6 @@ struct SpriteSheetTemplate(SpriteSheetBundle);
 #[derive(Event, Default)]
 struct Spawn;
 
-#[derive(Component)]
-struct SpawnEnemiesTimer {
-    timer: Timer,
-}
-
-impl Default for SpawnEnemiesTimer {
-    fn default() -> Self {
-        SpawnEnemiesTimer {
-            timer: Timer::new(Duration::from_secs(1), TimerMode::Once),
-        }
-    }
-}
-
 fn main() {
     App::new()
         .init_state::<GameStates>()
@@ -51,7 +32,7 @@ fn main() {
         .add_systems(Startup, setup)
         .add_systems(
             FixedUpdate,
-            (player::move_player, move_enemies, check_collisions)
+            (player::move_player, enemies::move_enemies, check_collisions)
                 .run_if(in_state(GameStates::Running)),
         )
         .add_systems(
@@ -106,7 +87,7 @@ fn setup(
 fn check_collisions(
     mut commands: Commands,
     mut player: Query<(Entity, &player::Player, &mut Transform)>,
-    enemies: Query<(Entity, &Transform, &Enemy), Without<player::Player>>,
+    enemies: Query<(Entity, &Transform, &enemies::Enemy), Without<player::Player>>,
     mut next_state: ResMut<NextState<GameStates>>,
 ) {
     let Ok((player_entity, _player, mut transform)) = player.get_single_mut() else {
@@ -149,7 +130,7 @@ fn spawn_player(
 
 fn spawn_enemies(mut restart_event: EventReader<Spawn>, mut commands: Commands) {
     for _event in restart_event.read() {
-        commands.spawn(SpawnEnemiesTimer::default());
+        commands.spawn(enemies::SpawnEnemiesTimer::default());
     }
 }
 
@@ -157,7 +138,7 @@ fn spawn_enemies_timer(
     template: Res<SpriteSheetTemplate>,
     window_query: Query<&Window>,
     time: Res<Time>,
-    mut spawn_enemies_timer: Query<(Entity, &mut SpawnEnemiesTimer)>,
+    mut spawn_enemies_timer: Query<(Entity, &mut enemies::SpawnEnemiesTimer)>,
     mut commands: Commands,
 ) {
     let window = window_query.single();
@@ -188,8 +169,8 @@ fn spawn_enemies_timer(
                     .with_translation(PLAYER_STARTING_TRANSFORM.translation + direction);
 
                 commands.spawn((
-                    Enemy {
-                        destination: random_destination(window),
+                    enemies::Enemy {
+                        destination: enemies::random_destination(window),
                     },
                     bundle,
                 ));
@@ -200,7 +181,7 @@ fn spawn_enemies_timer(
 }
 
 fn restart_game(
-    entities: Query<Entity, Or<(With<player::Player>, With<Enemy>)>>,
+    entities: Query<Entity, Or<(With<player::Player>, With<enemies::Enemy>)>>,
     mut next_state: ResMut<NextState<GameStates>>,
     mut restart_event: EventReader<player::Restart>,
     mut spawn_event: EventWriter<Spawn>,
@@ -214,35 +195,5 @@ fn restart_game(
         spawn_event.send_default();
 
         next_state.set(GameStates::Running);
-    }
-}
-
-fn move_enemies(mut enemies: Query<(&mut Enemy, &mut Transform)>, window_query: Query<&Window>) {
-    let window = window_query.single();
-    enemies.iter_mut().for_each(|(mut enemy, mut transform)| {
-        // Give it a fudge factor
-        if transform
-            .translation
-            .xy()
-            .distance_squared(enemy.destination)
-            < 4.0
-        {
-            enemy.destination = random_destination(window);
-        } else {
-            let direction =
-                (enemy.destination - transform.translation.xy()).normalize() * ENEMY_SPEED;
-            transform.translation.x += direction.x;
-            transform.translation.y += direction.y;
-        }
-    });
-}
-
-fn random_destination(window: &Window) -> Vec2 {
-    let mut rng = thread_rng();
-    let half_width = window.width() / 2.0;
-    let half_height = window.height() / 2.0;
-    Vec2 {
-        x: rng.gen_range(-half_width..half_width),
-        y: rng.gen_range(-half_height..half_height),
     }
 }
