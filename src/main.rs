@@ -27,7 +27,7 @@ enum GameStates {
 struct SpriteSheetTemplate(SpriteSheetBundle);
 
 #[derive(Event, Default)]
-struct SpawnEnemies;
+struct Spawn;
 
 #[derive(Component)]
 struct SpawnEnemiesTimer {
@@ -47,8 +47,7 @@ fn main() {
         .init_state::<GameStates>()
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
         .add_event::<player::Restart>()
-        .add_event::<player::Spawn>()
-        .add_event::<SpawnEnemies>()
+        .add_event::<Spawn>()
         .add_systems(Startup, setup)
         .add_systems(
             FixedUpdate,
@@ -73,8 +72,7 @@ fn main() {
 fn setup(
     asset_server: Res<AssetServer>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
-    mut spawn_player_event: EventWriter<player::Spawn>,
-    mut spawn_enemies_event: EventWriter<SpawnEnemies>,
+    mut spawn_event: EventWriter<Spawn>,
     mut commands: Commands,
 ) {
     commands.spawn(Camera2dBundle::default());
@@ -100,8 +98,7 @@ fn setup(
     };
     commands.insert_resource(SpriteSheetTemplate(sprite_template.clone()));
 
-    spawn_player_event.send_default();
-    spawn_enemies_event.send_default();
+    spawn_event.send_default();
 }
 
 // This is doing a bunch of calculations every frame. You could make this on an event and just use
@@ -139,7 +136,7 @@ fn check_collisions(
 
 fn spawn_player(
     template: Res<SpriteSheetTemplate>,
-    mut spawn_event: EventReader<player::Spawn>,
+    mut spawn_event: EventReader<Spawn>,
     mut commands: Commands,
 ) {
     for _event in spawn_event.read() {
@@ -150,7 +147,7 @@ fn spawn_player(
     }
 }
 
-fn spawn_enemies(mut restart_event: EventReader<SpawnEnemies>, mut commands: Commands) {
+fn spawn_enemies(mut restart_event: EventReader<Spawn>, mut commands: Commands) {
     for _event in restart_event.read() {
         commands.spawn(SpawnEnemiesTimer::default());
     }
@@ -206,8 +203,7 @@ fn restart_game(
     entities: Query<Entity, Or<(With<player::Player>, With<Enemy>)>>,
     mut next_state: ResMut<NextState<GameStates>>,
     mut restart_event: EventReader<player::Restart>,
-    mut spawn_player_event: EventWriter<player::Spawn>,
-    mut spawn_enemies_event: EventWriter<SpawnEnemies>,
+    mut spawn_event: EventWriter<Spawn>,
     mut commands: Commands,
 ) {
     for _event in restart_event.read() {
@@ -215,8 +211,7 @@ fn restart_game(
             commands.entity(entity).despawn();
         });
 
-        spawn_player_event.send_default();
-        spawn_enemies_event.send_default();
+        spawn_event.send_default();
 
         next_state.set(GameStates::Running);
     }
