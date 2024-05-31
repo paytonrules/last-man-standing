@@ -32,7 +32,12 @@ fn main() {
         .add_systems(Startup, setup)
         .add_systems(
             FixedUpdate,
-            (player::move_player, enemies::move_enemies, check_collisions)
+            (
+                player::move_player,
+                enemies::move_enemies,
+                check_collisions,
+                player::animate_growth,
+            )
                 .run_if(in_state(GameStates::Running)),
         )
         .add_systems(
@@ -90,29 +95,32 @@ fn check_collisions(
     enemies: Query<(Entity, &Transform, &enemies::Enemy), Without<player::Player>>,
     mut next_state: ResMut<NextState<GameStates>>,
 ) {
-    let Ok((player_entity, _player, mut transform)) = player.get_single_mut() else {
-        return;
-    };
+    for (player_entity, _player, transform) in player.iter_mut() {
+        let scaled = 16.0 * transform.scale.truncate();
+        let player_rect = Rect::from_center_size(transform.translation.truncate(), scaled);
 
-    let scaled = 16.0 * transform.scale.truncate();
-    let player_rect = Rect::from_center_size(transform.translation.truncate(), scaled);
+        enemies
+            .iter()
+            .for_each(|(entity, enemy_transform, _enemy_component)| {
+                let scaled = 16.0 * enemy_transform.scale.truncate();
+                let enemy_rect =
+                    Rect::from_center_size(enemy_transform.translation.truncate(), scaled);
 
-    enemies
-        .iter()
-        .for_each(|(entity, enemy_transform, _enemy_component)| {
-            let scaled = 16.0 * enemy_transform.scale.truncate();
-            let enemy_rect = Rect::from_center_size(enemy_transform.translation.truncate(), scaled);
+                if !player_rect.intersect(enemy_rect).is_empty() {
+                    if transform.scale.length_squared() > enemy_transform.scale.length_squared() {
+                        commands.entity(entity).despawn();
 
-            if !player_rect.intersect(enemy_rect).is_empty() {
-                if transform.scale.length_squared() > enemy_transform.scale.length_squared() {
-                    commands.entity(entity).despawn();
-                    transform.scale += 0.2;
-                } else {
-                    commands.entity(player_entity).despawn();
-                    next_state.set(GameStates::Dead);
+                        commands.entity(player_entity).insert(player::Tween {
+                            destination_scale: transform.scale + 0.4,
+                            step_value: Vec3::splat(0.08),
+                        });
+                    } else {
+                        commands.entity(player_entity).despawn();
+                        next_state.set(GameStates::Dead);
+                    }
                 }
-            }
-        });
+            });
+    }
 }
 
 fn spawn_player(

@@ -7,6 +7,12 @@ pub struct Player {
     direction: Vec2,
 }
 
+#[derive(Component, Default)]
+pub struct Tween {
+    pub step_value: Vec3,
+    pub destination_scale: Vec3,
+}
+
 #[derive(Event)]
 pub struct Restart;
 
@@ -53,5 +59,22 @@ pub fn listen_for_restart_button(
 ) {
     if keys.pressed(KeyCode::KeyR) {
         restart.send(Restart);
+    }
+}
+
+// TODO: For now this just does growing, but really this could handle any tween
+// This doesn't do any kind of easing
+pub fn animate_growth(mut tweens: Query<(Entity, &Tween, &mut Transform)>, mut commands: Commands) {
+    for (entity, tween, mut transform) in tweens.iter_mut() {
+        // NOTE: If the step distance isn't in the right direction (that is towards the
+        // destination) then this will go forever.
+        if tween.destination_scale.distance_squared(transform.scale)
+            < tween.step_value.length_squared()
+        {
+            transform.scale = tween.destination_scale;
+            commands.entity(entity).remove::<Tween>();
+        } else {
+            transform.scale += tween.step_value;
+        }
     }
 }
