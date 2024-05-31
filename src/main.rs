@@ -23,12 +23,16 @@ struct SpriteSheetTemplate(SpriteSheetBundle);
 #[derive(Event, Default)]
 struct Spawn;
 
+#[derive(Event)]
+struct ZoomOut;
+
 fn main() {
     App::new()
         .init_state::<GameStates>()
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
         .add_event::<player::Restart>()
         .add_event::<Spawn>()
+        .add_event::<ZoomOut>()
         .add_systems(Startup, setup)
         .add_systems(
             FixedUpdate,
@@ -37,6 +41,7 @@ fn main() {
                 enemies::move_enemies,
                 check_collisions,
                 player::animate_growth,
+                expand_camera,
             )
                 .run_if(in_state(GameStates::Running)),
         )
@@ -94,32 +99,43 @@ fn check_collisions(
     mut player: Query<(Entity, &player::Player, &mut Transform)>,
     enemies: Query<(Entity, &Transform, &enemies::Enemy), Without<player::Player>>,
     mut next_state: ResMut<NextState<GameStates>>,
+    mut zoom_out_event: EventWriter<ZoomOut>,
 ) {
+    if enemies.iter().len() <= 0 {
+        return;
+    }
+
+    let mut all_enemies_deleted = true;
     for (player_entity, _player, transform) in player.iter_mut() {
         let scaled = 16.0 * transform.scale.truncate();
         let player_rect = Rect::from_center_size(transform.translation.truncate(), scaled);
 
-        enemies
-            .iter()
-            .for_each(|(entity, enemy_transform, _enemy_component)| {
-                let scaled = 16.0 * enemy_transform.scale.truncate();
-                let enemy_rect =
-                    Rect::from_center_size(enemy_transform.translation.truncate(), scaled);
+        for (entity, enemy_transform, _enemy_component) in enemies.iter() {
+            let scaled = 16.0 * enemy_transform.scale.truncate();
+            let enemy_rect = Rect::from_center_size(enemy_transform.translation.truncate(), scaled);
 
-                if !player_rect.intersect(enemy_rect).is_empty() {
-                    if transform.scale.length_squared() > enemy_transform.scale.length_squared() {
-                        commands.entity(entity).despawn();
+            if !player_rect.intersect(enemy_rect).is_empty() {
+                if transform.scale.length_squared() > enemy_transform.scale.length_squared() {
+                    commands.entity(entity).despawn();
 
-                        commands.entity(player_entity).insert(player::Tween {
-                            destination_scale: transform.scale + 0.4,
-                            step_value: Vec3::splat(0.08),
-                        });
-                    } else {
-                        commands.entity(player_entity).despawn();
-                        next_state.set(GameStates::Dead);
-                    }
+                    commands.entity(player_entity).insert(player::Tween {
+                        destination_scale: transform.scale + 0.4,
+                        step_value: Vec3::splat(0.08),
+                    });
+                } else {
+                    commands.entity(player_entity).despawn();
+                    next_state.set(GameStates::Dead);
                 }
-            });
+            } else {
+                all_enemies_deleted = false;
+            }
+        }
+    }
+
+    if all_enemies_deleted {
+        zoom_out_event.send(ZoomOut);
+        // Pretty hacky but should work
+        commands.spawn(enemies::SpawnEnemiesTimer::default());
     }
 }
 
@@ -203,5 +219,15 @@ fn restart_game(
         spawn_event.send_default();
 
         next_state.set(GameStates::Running);
+    }
+}
+
+fn expand_camera(
+    mut zoom_out_event: EventReader<ZoomOut>,
+    mut camera_query: Query<(&Camera, &mut OrthographicProjection)>,
+) {
+    for _event in zoom_out_event.read() {
+        let (_camera, mut projection) = camera_query.single_mut();
+        projection.scale *= 1.3;
     }
 }
