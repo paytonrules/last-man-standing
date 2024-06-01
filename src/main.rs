@@ -169,7 +169,8 @@ fn spawn_enemies_timer(
 ) {
     for (entity, mut spawner) in spawn_enemies_timer.iter_mut() {
         let window = window_query.single();
-        let player_transform = players.single(); // In the end, there can be only one
+        let player_transform = players.single(); // NOTE: This can crash when the player dies at
+                                                 // the right time.
         spawner.timer.tick(time.delta());
 
         if spawner.timer.finished() {
@@ -208,6 +209,7 @@ fn spawn_enemies_timer(
 
 fn restart_game(
     entities: Query<Entity, Or<(With<player::Player>, With<enemies::Enemy>)>>,
+    mut camera_query: Query<(&Camera, &mut OrthographicProjection)>,
     mut next_state: ResMut<NextState<GameStates>>,
     mut restart_event: EventReader<player::Restart>,
     mut spawn_event: EventWriter<Spawn>,
@@ -217,6 +219,9 @@ fn restart_game(
         entities.iter().for_each(|entity| {
             commands.entity(entity).despawn();
         });
+
+        let (_camera, mut projection) = camera_query.single_mut();
+        projection.scale = 1.0;
 
         spawn_event.send_default();
 
