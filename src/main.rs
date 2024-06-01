@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use player::Player;
 use rand::{thread_rng, Rng};
 
 mod enemies;
@@ -96,7 +97,7 @@ fn setup(
 // components you update on change
 fn check_collisions(
     mut commands: Commands,
-    mut player: Query<(Entity, &player::Player, &mut Transform)>,
+    player: Query<(Entity, &player::Player, &mut Transform)>,
     enemies: Query<(Entity, &Transform, &enemies::Enemy), Without<player::Player>>,
     mut next_state: ResMut<NextState<GameStates>>,
     mut zoom_out_event: EventWriter<ZoomOut>,
@@ -106,7 +107,7 @@ fn check_collisions(
     }
 
     let mut all_enemies_deleted = true;
-    for (player_entity, _player, transform) in player.iter_mut() {
+    for (player_entity, _player, transform) in player.iter() {
         let scaled = 16.0 * transform.scale.truncate();
         let player_rect = Rect::from_center_size(transform.translation.truncate(), scaled);
 
@@ -162,12 +163,13 @@ fn spawn_enemies_timer(
     template: Res<SpriteSheetTemplate>,
     window_query: Query<&Window>,
     time: Res<Time>,
+    players: Query<&Transform, With<player::Player>>,
     mut spawn_enemies_timer: Query<(Entity, &mut enemies::SpawnEnemiesTimer)>,
     mut commands: Commands,
 ) {
-    let window = window_query.single();
-
     for (entity, mut spawner) in spawn_enemies_timer.iter_mut() {
+        let window = window_query.single();
+        let player_transform = players.single(); // In the end, there can be only one
         spawner.timer.tick(time.delta());
 
         if spawner.timer.finished() {
@@ -188,9 +190,9 @@ fn spawn_enemies_timer(
                     * rng.gen_range(MIN_DISTANCE_TO_ENEMY..MAX_DISTANCE_TO_ENEMY);
 
                 bundle.atlas.index = ENEMY_INDICES[rng.gen_range(0..ENEMY_INDICES.len())];
-                bundle.transform = PLAYER_STARTING_TRANSFORM
-                    .with_scale(PLAYER_STARTING_TRANSFORM.scale * rng.gen_range(0.8..1.2))
-                    .with_translation(PLAYER_STARTING_TRANSFORM.translation + direction);
+                bundle.transform = player_transform
+                    .with_scale(player_transform.scale * rng.gen_range(0.6..1.4))
+                    .with_translation(player_transform.translation + direction);
 
                 commands.spawn((
                     enemies::Enemy {
@@ -225,9 +227,13 @@ fn restart_game(
 fn expand_camera(
     mut zoom_out_event: EventReader<ZoomOut>,
     mut camera_query: Query<(&Camera, &mut OrthographicProjection)>,
+    mut players: Query<&mut Player>,
 ) {
     for _event in zoom_out_event.read() {
         let (_camera, mut projection) = camera_query.single_mut();
         projection.scale *= 1.3;
+        for mut player in players.iter_mut() {
+            player.speed *= 1.2;
+        }
     }
 }

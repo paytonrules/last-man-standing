@@ -1,10 +1,20 @@
 use bevy::prelude::*;
 
-const PLAYER_SPEED: f32 = 3.0;
+const INITIAL_PLAYER_SPEED: f32 = 3.0;
 
-#[derive(Component, Default)]
+#[derive(Component)]
 pub struct Player {
     direction: Vec2,
+    pub speed: f32,
+}
+
+impl Default for Player {
+    fn default() -> Self {
+        Player {
+            direction: Vec2::default(),
+            speed: INITIAL_PLAYER_SPEED,
+        }
+    }
 }
 
 #[derive(Component, Default)]
@@ -23,8 +33,8 @@ pub fn move_player(mut player_query: Query<(&Player, &mut Transform)>) {
     let Ok((player, mut transform)) = player_query.get_single_mut() else {
         return;
     };
-    transform.translation.x += player.direction.x * PLAYER_SPEED;
-    transform.translation.y += player.direction.y * PLAYER_SPEED;
+    transform.translation.x += player.direction.x * player.speed;
+    transform.translation.y += player.direction.y * player.speed;
 }
 
 pub fn update_player_direction(
