@@ -90,6 +90,12 @@ fn setup(
     };
     commands.insert_resource(SpriteSheetTemplate(sprite_template.clone()));
 
+    let starbase: Handle<Image> = asset_server.load("textures/Starbasesnow.png");
+
+    commands.spawn(SpriteBundle {
+        texture: starbase,
+        ..default()
+    });
     spawn_event.send_default();
 }
 
