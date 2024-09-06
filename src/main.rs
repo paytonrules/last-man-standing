@@ -30,7 +30,17 @@ struct ZoomOut;
 fn main() {
     App::new()
         .init_state::<GameStates>()
-        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
+        .add_plugins(
+            DefaultPlugins
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        canvas: Some("#last-giant-standing".into()),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .set(ImagePlugin::default_nearest()),
+        )
         .add_event::<player::Restart>()
         .add_event::<Spawn>()
         .add_event::<ZoomOut>()
