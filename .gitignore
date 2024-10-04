@@ -1,2 +1,5 @@
 /target
 .DS_Store
+# I'm pretty sure these are both built but considering I've spent so little time on this
+out/*.wasm
+out/*.js

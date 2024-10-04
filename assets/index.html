@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+
+<body style="margin: 0px;">
+    <p>Tyler Perry writes real life</p>
+    <canvas id="last-giant-standing" />
+    <script type="module">
+    import init from './last-giant-standing.js'
+    init().catch((error) => {
+      if (!error.message.startsWith("Using exceptions for control flow, don't mind me. This isn't actually an error!")) {
+        throw error;
+      }
+    });
+    </script>
+</body>
+/html>
