@@ -4,6 +4,8 @@ See here:
 
 https://github.com/jakobhellermann/wasm-server-runner
 
+The command is cargo run --target wasm32-unknown-unknown. Then browse to http://localhost:1334/out/. For now anyway.
+
 I also made a very basic output version in the out directory following the directions here:
 
 https://bevy-cheatbook.github.io/platforms/wasm/webpage.html
