@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{asset::AssetMetaCheck, prelude::*};
 use player::Player;
 use rand::{thread_rng, Rng};
 
@@ -18,18 +18,17 @@ enum GameStates {
     Dead,
 }
 
-#[derive(Resource)]
-struct SpriteSheetTemplate(SpriteSheetBundle);
-
 #[derive(Event, Default)]
 struct Spawn;
 
 #[derive(Event)]
 struct ZoomOut;
 
+#[derive(Resource)]
+struct GlobalLayoutResource(Handle<TextureAtlasLayout>);
+
 fn main() {
     App::new()
-        .init_state::<GameStates>()
         .add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {
@@ -39,8 +38,13 @@ fn main() {
                     }),
                     ..Default::default()
                 })
-                .set(ImagePlugin::default_nearest()),
+                .set(ImagePlugin::default_nearest())
+                .set(AssetPlugin {
+                    meta_check: AssetMetaCheck::Never,
+                    ..default()
+                }),
         )
+        .init_state::<GameStates>()
         .add_event::<player::Restart>()
         .add_event::<Spawn>()
         .add_event::<ZoomOut>()
@@ -59,13 +63,12 @@ fn main() {
         .add_systems(
             Update,
             (
-                bevy::window::close_on_esc,
                 spawn_player,
                 spawn_enemies,
                 spawn_enemies_timer,
-                (player::update_player_direction).run_if(in_state(GameStates::Running)),
-                (player::listen_for_restart_button, restart_game)
-                    .run_if(in_state(GameStates::Dead)),
+                (player::update_player_direction).run_if(in_state(GameStates::Running))
+//                (player::listen_for_restart_button, restart_game)
+//                    .run_if(in_state(GameStates::Dead)),
             ),
         )
         .run();
@@ -77,35 +80,17 @@ fn setup(
     mut spawn_event: EventWriter<Spawn>,
     mut commands: Commands,
 ) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(Camera2d::default());
 
-    let texture: Handle<Image> = asset_server.load("textures/tilemap.png");
-    let layout = TextureAtlasLayout::from_grid(
-        Vec2::new(16.0, 16.0),
-        12,
-        11,
-        Some(Vec2::new(1.0, 1.0)),
-        None,
-    );
-
+    // Setup TextureAtlasLayout once and store it in a resource
+    let layout =
+        TextureAtlasLayout::from_grid(UVec2::new(16, 16), 12, 11, Some(UVec2::new(1, 1)), None);
     let texture_atlas_layout = texture_atlas_layouts.add(layout);
-
-    let sprite_template = SpriteSheetBundle {
-        texture: texture.clone(),
-        atlas: TextureAtlas {
-            layout: texture_atlas_layout.clone(),
-            index: 0,
-        },
-        ..default()
-    };
-    commands.insert_resource(SpriteSheetTemplate(sprite_template.clone()));
+    commands.insert_resource(GlobalLayoutResource(texture_atlas_layout));
 
     let starbase: Handle<Image> = asset_server.load("textures/Starbasesnow.png");
 
-    commands.spawn(SpriteBundle {
-        texture: starbase,
-        ..default()
-    });
+    commands.spawn(Sprite::from_image(starbase));
     spawn_event.send_default();
 }
 
@@ -157,15 +142,18 @@ fn check_collisions(
 }
 
 fn spawn_player(
-    template: Res<SpriteSheetTemplate>,
+    texture_layout: Res<GlobalLayoutResource>,
+    asset_server: Res<AssetServer>,
     mut spawn_event: EventReader<Spawn>,
     mut commands: Commands,
 ) {
+    let texture: Handle<Image> = asset_server.load("textures/tilemap.png");
+    let texture_layout = texture_layout.0.clone();
+
     for _event in spawn_event.read() {
-        let mut bundle = template.0.clone();
-        bundle.atlas.index = PLAYER_INDEX;
-        bundle.transform = PLAYER_STARTING_TRANSFORM;
-        commands.spawn((player::Player::default(), bundle));
+        commands.spawn((player::Player::default(), 
+            Sprite::from_atlas_image(texture.clone(), TextureAtlas {index: PLAYER_INDEX, layout: texture_layout.clone()}), 
+            PLAYER_STARTING_TRANSFORM.clone()));
     }
 }
 
@@ -176,13 +164,16 @@ fn spawn_enemies(mut restart_event: EventReader<Spawn>, mut commands: Commands) 
 }
 
 fn spawn_enemies_timer(
-    template: Res<SpriteSheetTemplate>,
-    window_query: Query<&Window>,
+    texture_layout: Res<GlobalLayoutResource>,
+    asset_server: Res<AssetServer>,
     time: Res<Time>,
+    window_query: Query<&Window>,
     players: Query<&Transform, With<player::Player>>,
     mut spawn_enemies_timer: Query<(Entity, &mut enemies::SpawnEnemiesTimer)>,
     mut commands: Commands,
 ) {
+    let texture: Handle<Image> = asset_server.load("textures/tilemap.png");
+
     for (entity, mut spawner) in spawn_enemies_timer.iter_mut() {
         let window = window_query.single();
         let player_transform = players.single(); // NOTE: This can crash when the player dies at
@@ -190,10 +181,8 @@ fn spawn_enemies_timer(
         spawner.timer.tick(time.delta());
 
         if spawner.timer.finished() {
-            let bundle = &template.0;
             let mut rng = thread_rng();
             for _ in 0..10 {
-                let mut bundle = bundle.clone();
                 let mut direction = None;
                 while direction.is_none() {
                     direction = Vec3 {
@@ -206,16 +195,16 @@ fn spawn_enemies_timer(
                 let direction = direction.unwrap()
                     * rng.gen_range(MIN_DISTANCE_TO_ENEMY..MAX_DISTANCE_TO_ENEMY);
 
-                bundle.atlas.index = ENEMY_INDICES[rng.gen_range(0..ENEMY_INDICES.len())];
-                bundle.transform = player_transform
-                    .with_scale(player_transform.scale * rng.gen_range(0.6..1.4))
-                    .with_translation(player_transform.translation + direction);
-
+                let enemy_index = ENEMY_INDICES[rng.gen_range(0..ENEMY_INDICES.len())];
                 commands.spawn((
                     enemies::Enemy {
                         destination: enemies::random_destination(window),
                     },
-                    bundle,
+                    Sprite::from_atlas_image(texture.clone(), TextureAtlas {index: enemy_index, layout: texture_layout.0.clone()}),
+                    player_transform
+                        .with_scale(player_transform.scale * rng.gen_range(0.6..1.4))
+                        .with_translation(player_transform.translation + direction)
+
                 ));
             }
             commands.entity(entity).despawn();

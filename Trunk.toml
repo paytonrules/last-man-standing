@@ -1,0 +1,7 @@
+[build]
+public_url = "./"
+
+[serve]
+port = 8080
+# Required in order to receive 404s for missing assets, which is what Bevy expects.
+no_spa = true
