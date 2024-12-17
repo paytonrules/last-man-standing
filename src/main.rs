@@ -66,9 +66,9 @@ fn main() {
                 spawn_player,
                 spawn_enemies,
                 spawn_enemies_timer,
-                (player::update_player_direction).run_if(in_state(GameStates::Running))
-//                (player::listen_for_restart_button, restart_game)
-//                    .run_if(in_state(GameStates::Dead)),
+                (player::update_player_direction).run_if(in_state(GameStates::Running)),
+                (player::listen_for_restart_button, restart_game)
+                    .run_if(in_state(GameStates::Dead)),
             ),
         )
         .run();
