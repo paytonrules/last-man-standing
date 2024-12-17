@@ -1,27 +1,20 @@
-Note that you can test this with wasm-server-runner, which means changing values in your home directory.
+# Last Man Standing
 
-See here:
+This is a very basic game I made for a game jam about 6 months ago. I'm finally getting it together so that I can do some more work on it. It uses Bevy and builds to web assembly for a web-based game.
 
-https://github.com/jakobhellermann/wasm-server-runner
+## Requirements
 
-The command is cargo run --target wasm32-unknown-unknown. Then browse to http://localhost:1334/out/. For now anyway.
++ Rust version 1.83
++ wasm32-unknown-unknown target
 
-I also made a very basic output version in the out directory following the directions here:
+Currently this is on the stable toolchain. It uses Trunk to manage its WebAssembly build: https://trunkrs.dev/
 
-https://bevy-cheatbook.github.io/platforms/wasm/webpage.html
+### Using Trunk
 
-I'll make this into a Makefile shortly.
-The Makefile needs to run the complicated build command, and copy over the assets and html to the out directory.
+1) Install trunk (`cargo install trunk --locked`)
+1) Install wasm-bindgen (because I am an apple M1 user, this must be done manually)
+1) `trunk serve` will serve the game and hotreload on any changes
 
-TODO:
-Let's try using trunk instead of using wasm-server-runner.
-Follow https://bevy-cheatbook.github.io/platforms/wasm/gh-pages.html to deploy to github pages
-- Just use `out` as the root directory
-Figure out why you have 'target' and 'out'. Write that up here.
-Write a little automation to do this, maybe in Make, maybe in rust/bin
-Update this
+## Deployment
 
-# Using Trunk
-
-1 - install trunk (`cargo install trunk --locked`)
-2 - install wasm-bindgen (because I am an apple M1 user)
+Deploying to Github pages. TBD
