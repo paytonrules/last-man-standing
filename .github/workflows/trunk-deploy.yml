@@ -16,4 +16,4 @@ jobs:
             components: rustfmt, clippy
       - uses: jetli/trunk-action@v0.1.0
       - uses: jetli/wasm-bindgen-action@v0.1.0
-      - run: trunk build release
+      - run: trunk build --release
