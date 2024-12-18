@@ -90,7 +90,7 @@ fn setup(
 
     let starbase: Handle<Image> = asset_server.load("textures/Starbasesnow.png");
 
-    commands.spawn(Sprite::from_image(starbase));
+    commands.spawn((Sprite::from_image(starbase), Transform::from_xyz(0.0, 0.0, -1.0)));
     spawn_event.send_default();
 }
 
