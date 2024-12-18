@@ -90,7 +90,10 @@ fn setup(
 
     let starbase: Handle<Image> = asset_server.load("textures/Starbasesnow.png");
 
-    commands.spawn((Sprite::from_image(starbase), Transform::from_xyz(0.0, 0.0, -1.0)));
+    commands.spawn((
+        Sprite::from_image(starbase),
+        Transform::from_xyz(0.0, 0.0, -1.0),
+    ));
     spawn_event.send_default();
 }
 
@@ -151,9 +154,17 @@ fn spawn_player(
     let texture_layout = texture_layout.0.clone();
 
     for _event in spawn_event.read() {
-        commands.spawn((player::Player::default(), 
-            Sprite::from_atlas_image(texture.clone(), TextureAtlas {index: PLAYER_INDEX, layout: texture_layout.clone()}), 
-            PLAYER_STARTING_TRANSFORM.clone()));
+        commands.spawn((
+            player::Player::default(),
+            Sprite::from_atlas_image(
+                texture.clone(),
+                TextureAtlas {
+                    index: PLAYER_INDEX,
+                    layout: texture_layout.clone(),
+                },
+            ),
+            PLAYER_STARTING_TRANSFORM.clone(),
+        ));
     }
 }
 
@@ -200,11 +211,16 @@ fn spawn_enemies_timer(
                     enemies::Enemy {
                         destination: enemies::random_destination(window),
                     },
-                    Sprite::from_atlas_image(texture.clone(), TextureAtlas {index: enemy_index, layout: texture_layout.0.clone()}),
+                    Sprite::from_atlas_image(
+                        texture.clone(),
+                        TextureAtlas {
+                            index: enemy_index,
+                            layout: texture_layout.0.clone(),
+                        },
+                    ),
                     player_transform
                         .with_scale(player_transform.scale * rng.gen_range(0.6..1.4))
-                        .with_translation(player_transform.translation + direction)
-
+                        .with_translation(player_transform.translation + direction),
                 ));
             }
             commands.entity(entity).despawn();
