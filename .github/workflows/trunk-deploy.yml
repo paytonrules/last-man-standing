@@ -17,6 +17,7 @@ jobs:
             components: rustfmt, clippy
       - uses: jetli/trunk-action@v0.1.0
       - uses: jetli/wasm-bindgen-action@v0.1.0
+      - run: cargo fmt --all -- --check
       - name: Build Static Site with Trunk
         run: trunk build --release
       - name: Upload static files as an artifact
